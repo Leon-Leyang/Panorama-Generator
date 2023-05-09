@@ -45,7 +45,7 @@ def extract_sift_features(frames):
 
 
 # Function to calculate the homographies between consecutive frames
-def calc_homographies(keypoints, descriptors):
+def calc_adjacent_homographies(keypoints, descriptors):
     homographies = []
 
     # Create a BFMatcher object
@@ -71,6 +71,18 @@ def calc_homographies(keypoints, descriptors):
         homographies.append(h)
 
     return homographies
+
+
+# Function to cumulate the homographies
+def cumulate_homographies(homographies):
+    # Initialize the cumulative homographies
+    cumulative_homographies = [np.identity(3)]
+
+    # Cumulate the homographies iteratively
+    for h in homographies:
+        cumulative_homographies.append(cumulative_homographies[-1] @ h)
+
+    return cumulative_homographies
 
 
 # Function to display a list of frames

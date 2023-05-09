@@ -11,5 +11,9 @@ frames = extract_frames(video_path, interval, width, height)
 # Extract SIFT features for the frames
 keypoints, descriptors = extract_sift_features(frames)
 
-# Calculate the homographies between frames
-homographies = calc_homographies(keypoints, descriptors)
+# Calculate the homographies between adjacent frames
+adjacent_homographies = calc_adjacent_homographies(keypoints, descriptors)
+
+# Cumulate the homographies
+cumulative_homographies = cumulate_homographies(adjacent_homographies)
+
