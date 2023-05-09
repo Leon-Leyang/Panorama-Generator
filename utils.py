@@ -14,12 +14,42 @@ def extract_frames(video_path, interval):
             frames.append(frame)
         frame_count += 1
     cap.release()
+
     return frames
+
+
+# Function to extract SIFT features for a list of frames
+def extract_sift_features(frames):
+    # Convert the frames to grayscale
+    frames = [cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) for frame in frames]
+
+    # Create a SIFT object
+    sift = cv2.SIFT_create()
+
+    # Extract SIFT features iteratively
+    keypoints = []
+    descriptors = []
+    for frame in frames:
+        kp, des = sift.detectAndCompute(frame, None)
+        keypoints.append(kp)
+        descriptors.append(des)
+
+    return keypoints, descriptors
 
 
 # Function to display a list of frames
 def display_frames(frames):
     for frame in frames:
+        cv2.imshow('frame', frame)
+        cv2.waitKey(0)
+
+
+# Function to display a list of frames with keypoints
+def display_frames_with_keypoints(frames, keypoints):
+    for i in range(len(frames)):
+        frame = frames[i]
+        kp = keypoints[i]
+        frame = cv2.drawKeypoints(frame, kp, None)
         cv2.imshow('frame', frame)
         cv2.waitKey(0)
 
