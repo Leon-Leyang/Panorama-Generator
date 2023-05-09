@@ -1,10 +1,8 @@
 import cv2
-
-
-# Function to extract frames with a given interval from a video in the given path
 import numpy as np
 
 
+# Function to extract frames with a given interval from a video in the given path
 def extract_frames(video_path, interval, width=1920, height=1080):
     frames = []
     cap = cv2.VideoCapture(video_path)
@@ -83,6 +81,23 @@ def cumulate_homographies(homographies):
         cumulative_homographies.append(cumulative_homographies[-1] @ h)
 
     return cumulative_homographies
+
+
+# Function to warp all frames to the coordinate system of the first frame
+def warp_frames(frames, cumulative_homographies):
+    warped_frames = []
+
+    # Warp all frames iteratively
+    for i in range(len(frames)):
+        # Get the inverse of the cumulative homography
+        h_inv = np.linalg.inv(cumulative_homographies[i])
+
+        # Warp the current frame
+        size = tuple(map(int, (frames[i].shape[1] * 3, frames[i].shape[0] * 1.5)))
+        warped_frame = cv2.warpPerspective(frames[i], h_inv, size)
+        warped_frames.append(warped_frame)
+
+    return warped_frames
 
 
 # Function to display a list of frames
