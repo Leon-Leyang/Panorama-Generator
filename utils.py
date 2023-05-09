@@ -2,7 +2,7 @@ import cv2
 
 
 # Function to extract frames with a given interval from a video in the given path
-def extract_frames(video_path, interval):
+def extract_frames(video_path, interval, width=1920, height=1080):
     frames = []
     cap = cv2.VideoCapture(video_path)
     frame_count = 0
@@ -11,6 +11,10 @@ def extract_frames(video_path, interval):
         if not ret:
             break
         if frame_count % interval == 0:
+            frame_height, frame_width = frame.shape[:2]
+            x_start = int((frame_width - width) / 2)
+            y_start = int((frame_height - height) / 2)
+            frame = frame[y_start:y_start + height, x_start:x_start + width]
             frames.append(frame)
         frame_count += 1
     cap.release()
