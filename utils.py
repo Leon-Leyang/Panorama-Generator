@@ -2,6 +2,9 @@ import cv2
 
 
 # Function to extract frames with a given interval from a video in the given path
+import numpy as np
+
+
 def extract_frames(video_path, interval, width=1920, height=1080):
     frames = []
     cap = cv2.VideoCapture(video_path)
@@ -39,6 +42,35 @@ def extract_sift_features(frames):
         descriptors.append(des)
 
     return keypoints, descriptors
+
+
+# Function to calculate the homographies between consecutive frames
+def calc_homographies(keypoints, descriptors):
+    homographies = []
+
+    # Create a BFMatcher object
+    bfm = cv2.BFMatcher()
+
+    for i in range(len(keypoints) - 1):
+        # Find the matches between the descriptors of the current frame and the next frame
+        matches = bfm.knnMatch(descriptors[i], descriptors[i + 1], k=2)
+
+        # Apply Lowe's ratio test to select good matches
+        # https://docs.opencv.org/3.4/d5/d6f/tutorial_feature_flann_matcher.html
+        good_matches = []
+        for m1, m2 in matches:
+            if m1.distance < 0.75 * m2.distance:
+                good_matches.append(m1)
+
+        # Extract the coordinates of the matched keypoints
+        src_pts = [keypoints[i][m.queryIdx].pt for m in good_matches]
+        dst_pts = [keypoints[i + 1][m.trainIdx].pt for m in good_matches]
+
+        # Calculate the homography between the current frame and the next frame
+        h, _ = cv2.findHomography(np.array(src_pts), np.array(dst_pts), cv2.RANSAC)
+        homographies.append(h)
+
+    return homographies
 
 
 # Function to display a list of frames
