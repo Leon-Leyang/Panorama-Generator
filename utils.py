@@ -17,6 +17,13 @@ def extract_frames(video_path, interval):
     return frames
 
 
+# Function to display a list of frames
+def display_frames(frames):
+    for frame in frames:
+        cv2.imshow('frame', frame)
+        cv2.waitKey(0)
+
+
 if __name__ == '__main__':
     video_path = 'data/stable/lib_stable.mp4'
     interval = 24
@@ -25,6 +32,4 @@ if __name__ == '__main__':
     print(len(frames))
 
     # Display the frames
-    for frame in frames:
-        cv2.imshow('frame', frame)
-        cv2.waitKey(0)
+    display_frames(frames)
