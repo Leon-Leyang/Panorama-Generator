@@ -50,5 +50,7 @@ video_path = 'data/stable/garden_stable.mp4'
 print('Generating panorama...')
 result_path = os.path.join('result', video_path.split('/')[-1].split('.')[0] + '.jpg')
 s_time = time.time()
-panorama = PanoramaGenerator.gen_panorama(warped_frames, result_path)
+# panorama = PanoramaGenerator.gen_panorama(warped_frames, result_path)
+blender = MultibandBlender(3)
+panorama = blender.blend(warped_frames)
 print(f'Done! Saved the panorama in {result_path}. Take {time.time() - s_time:.2f}s.\n')
