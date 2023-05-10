@@ -2,7 +2,7 @@ import time
 import os
 from utils import *
 
-
+'''
 # Extract frames from the video
 video_path = 'data/stable/garden_stable.mp4'
 interval = 24
@@ -38,11 +38,17 @@ print('Warping frames...')
 s_time = time.time()
 warped_frames = warp_frames(frames, cumulative_homographies)
 print(f'Done! Warped all frames to the coordinate system of the first frame. Take {time.time() - s_time:.2f}s.\n')
+'''
+
+
+import pickle
+with open('./warped_frames.pkl', 'rb') as f:
+    warped_frames = pickle.load(f)
+video_path = 'data/stable/garden_stable.mp4'
 
 # Generate panorama from the warped frames
 print('Generating panorama...')
-num_levels = 3
 result_path = os.path.join('result', video_path.split('/')[-1].split('.')[0] + '.jpg')
 s_time = time.time()
-panorama = PanoramaGenerator.gen_panorama(warped_frames, num_levels, result_path)
+panorama = PanoramaGenerator.gen_panorama(warped_frames, result_path)
 print(f'Done! Saved the panorama in {result_path}. Take {time.time() - s_time:.2f}s.\n')
