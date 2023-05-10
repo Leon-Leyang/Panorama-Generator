@@ -101,10 +101,9 @@ def warp_frames(frames, cumulative_homographies):
 
 
 # Function to display a list of frames
-def display_frames(frames, width=None, height=None):
+def display_frames(frames, scale=1):
     for frame in frames:
-        if width and height:
-            frame = cv2.resize(frame, (width, height))
+        frame = cv2.resize(frame, (int(frame.shape[1] * scale), int(frame.shape[0] * scale)))
         cv2.imshow('frame', frame)
         cv2.waitKey(0)
 
