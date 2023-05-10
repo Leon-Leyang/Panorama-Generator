@@ -118,6 +118,90 @@ def display_frames_with_keypoints(frames, keypoints):
         cv2.waitKey(0)
 
 
+# Class to generate a panorama from warped frames
+class PanoramaGenerator:
+    @staticmethod
+    def gen_panorama(warped_frames, num_levels, result_path):
+        panorama = warped_frames[0]
+        # Generate the smooth mask for blending
+        mask = PanoramaGenerator.__gen_smooth_mask(panorama)
+        for i in range(1, len(warped_frames)):
+            panorama = PanoramaGenerator.__blend_frames_multiband(panorama, warped_frames[i], mask, num_levels)
+        cv2.imwrite(result_path, panorama)
+
+    @staticmethod
+    # Function to generate a Gaussian pyramid
+    def __gen_gaussian_pyramid(frame, num_levels):
+        pyramid = [frame]
+        for _ in range(num_levels - 1):
+            frame = cv2.pyrDown(frame)
+            pyramid.append(frame)
+
+        return pyramid
+
+    @staticmethod
+    # Function to generate a Laplacian pyramid
+    def __gen_laplacian_pyramid(frame, num_levels):
+        gaussian_pyramid = PanoramaGenerator.__gen_gaussian_pyramid(frame, num_levels)
+        laplacian_pyramid = []
+        for i in range(num_levels - 1):
+            expanded_frame = cv2.pyrUp(gaussian_pyramid[i + 1])
+            # Resize the expanded frame to the size of the current level
+            expanded_frame = cv2.resize(expanded_frame, (gaussian_pyramid[i].shape[1], gaussian_pyramid[i].shape[0]))
+            laplacian_pyramid.append(gaussian_pyramid[i] - expanded_frame)
+
+        return laplacian_pyramid
+
+    @staticmethod
+    # Function to blend two laplacian pyramids
+    def __blend_laplacian_pyramids(pyramid_1, pyramid_2, pyramid_mask):
+        blended_pyramid = []
+        for i in range(len(pyramid_1)):
+            blended_pyramid.append(pyramid_1[i] * (1 - pyramid_mask[i]) + pyramid_2[i] * pyramid_mask[i])
+
+        return blended_pyramid
+
+    @staticmethod
+    # Function to reconstruct a frame from a laplacian pyramid
+    def __reconstruct_from_laplacian_pyramid(laplacian_pyramid):
+        frame = laplacian_pyramid[-1]
+        for i in range(len(laplacian_pyramid) - 2, -1, -1):
+            expanded_frame = cv2.pyrUp(frame)
+            # Resize the expanded frame to the size of the current level
+            expanded_frame = cv2.resize(expanded_frame, (laplacian_pyramid[i].shape[1], laplacian_pyramid[i].shape[0]))
+            frame = laplacian_pyramid[i] + expanded_frame
+
+        return frame
+
+    @staticmethod
+    # Function to generate a smooth mask of the same size as the frame
+    def __gen_smooth_mask(frame, kernel_size=5):
+        mask = np.zeros_like(frame)
+        for i in range(frame.shape[1]):
+            mask[:, i, :] = i / (frame.shape[1] - 1)
+        mask = cv2.GaussianBlur(mask, (kernel_size, kernel_size), (kernel_size - 1) / 2)
+
+        return mask
+
+    @staticmethod
+    # Function to blend two frames using multiband blending
+    def __blend_frames_multiband(frame_1, frame_2, mask, num_levels):
+        # Generate the Gaussian and Laplacian pyramids for the two frames
+        laplacian_pyramid_1 = PanoramaGenerator.__gen_laplacian_pyramid(frame_1, num_levels)
+        laplacian_pyramid_2 = PanoramaGenerator.__gen_laplacian_pyramid(frame_2, num_levels)
+        mask_pyramid = PanoramaGenerator.__gen_gaussian_pyramid(mask, num_levels)
+
+        # Blend the two laplacian pyramids
+        blended_laplacian_pyramid = PanoramaGenerator.__blend_laplacian_pyramids(laplacian_pyramid_1,
+                                                                                 laplacian_pyramid_2,
+                                                                                 mask_pyramid)
+
+        # Reconstruct the blended frame from the blended laplacian pyramid
+        blended_frame = PanoramaGenerator.__reconstruct_from_laplacian_pyramid(blended_laplacian_pyramid)
+
+        return blended_frame
+
+
 if __name__ == '__main__':
     video_path = 'data/stable/lib_stable.mp4'
     interval = 24
