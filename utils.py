@@ -119,82 +119,112 @@ def display_frames_with_keypoints(frames, keypoints):
 
 
 # Class to generate a panorama from warped frames
-class MultibandBlender:
-    def __init__(self, num_levels):
-        self.num_levels = num_levels
-
-    def blend(self, warped_frames):
+class PanoramaGenerator:
+    @staticmethod
+    def gen_panorama(warped_frames, result_path):
         panorama = warped_frames[0]
         for i in range(1, len(warped_frames)):
-            panorama = self.__blend_frames_multiband(panorama, warped_frames[i])
+            panorama = PanoramaGenerator.__blend_frames(panorama, warped_frames[i])
 
-        # Save the panorama
-        cv2.imwrite('./result/test.jpg', panorama)
+        cv2.imwrite('./result/test4.jpg', panorama)
 
-        return panorama
-
-    def __gen_gaussian_pyramid(self, frame):
+    @staticmethod
+    # Function to generate a Gaussian pyramid
+    def __gen_gaussian_pyramid(frame, num_levels):
         pyramid = [frame]
-        for _ in range(self.num_levels - 1):
+        for _ in range(num_levels - 1):
             frame = cv2.pyrDown(frame)
             pyramid.append(frame)
+
         return pyramid
 
-    def __gen_laplacian_pyramid(self, frame):
-        gaussian_pyramid = self.__gen_gaussian_pyramid(frame)
+    @staticmethod
+    # Function to generate a Laplacian pyramid
+    def __gen_laplacian_pyramid(frame, num_levels):
+        gaussian_pyramid = PanoramaGenerator.__gen_gaussian_pyramid(frame, num_levels)
         laplacian_pyramid = []
-        for i in range(self.num_levels - 1):
+        for i in range(num_levels - 1):
             expanded_frame = cv2.pyrUp(gaussian_pyramid[i + 1])
+            # Resize the expanded frame to the size of the current level
             expanded_frame = cv2.resize(expanded_frame, (gaussian_pyramid[i].shape[1], gaussian_pyramid[i].shape[0]))
             laplacian_pyramid.append(gaussian_pyramid[i] - expanded_frame)
+
         return laplacian_pyramid
 
-    def __blend_laplacian_pyramids(self, pyramid_1, pyramid_2, pyramid_mask):
+    @staticmethod
+    # Function to blend two laplacian pyramids
+    def __blend_laplacian_pyramids(pyramid_1, pyramid_2, pyramid_mask):
         blended_pyramid = []
         for i in range(len(pyramid_1)):
             blended_pyramid.append(pyramid_1[i] * (1 - pyramid_mask[i]) + pyramid_2[i] * pyramid_mask[i])
+
         return blended_pyramid
 
-    def __reconstruct_from_laplacian_pyramid(self, laplacian_pyramid):
+    @staticmethod
+    # Function to reconstruct a frame from a laplacian pyramid
+    def __reconstruct_from_laplacian_pyramid(laplacian_pyramid):
         frame = laplacian_pyramid[-1]
         for i in range(len(laplacian_pyramid) - 2, -1, -1):
             expanded_frame = cv2.pyrUp(frame)
+            # Resize the expanded frame to the size of the current level
             expanded_frame = cv2.resize(expanded_frame, (laplacian_pyramid[i].shape[1], laplacian_pyramid[i].shape[0]))
             frame = laplacian_pyramid[i] + expanded_frame
+
         return frame
 
-    def __gen_smooth_mask(self, frame):
+    @staticmethod
+    # Function to generate a smooth mask of the same size as the frame
+    def __gen_smooth_mask(frame, kernel_size=5):
         mask = np.zeros_like(frame)
         for i in range(frame.shape[1]):
             mask[:, i, :] = i / (frame.shape[1] - 1)
-        mask = cv2.GaussianBlur(mask, (5, 5), (5 - 1) / 2)
+        mask = cv2.GaussianBlur(mask, (kernel_size, kernel_size), (kernel_size - 1) / 2)
+
         return mask
 
-    def __get_valid_mask(self, frame):
+    @staticmethod
+    # Function to get the mask of the valid region of a frame
+    def __get_valid_mask(frame):
         vld_mask = np.any(frame != 0, axis=-1)
-        vld_mask = np.stack((vld_mask, vld_mask, vld_mask), axis=-1).astype(np.uint8)
+
+        # Stack the mask three times to get a 3-channel mask
+        vld_mask = np.stack((vld_mask, vld_mask, vld_mask), axis=-1).astype(np.float32)
         return vld_mask
 
-    def __blend_frames_multiband(self, frame_1, frame_2):
-        vld_mask_1 = self.__get_valid_mask(frame_1)
-        vld_mask_2 = self.__get_valid_mask(frame_2)
-        combined_mask = vld_mask_1 + vld_mask_2
-        mask = combined_mask.astype(np.float32)
-        mask[(vld_mask_1 == 1) & (combined_mask == 1)] = 0
-        mask[(vld_mask_2 == 1) & (combined_mask == 1)] = 1
-        mask[combined_mask == 2] = 0.5
 
-        laplacian_pyramid_1 = self.__gen_laplacian_pyramid(frame_1)
-        laplacian_pyramid_2 = self.__gen_laplacian_pyramid(frame_2)
-        mask_pyramid = self.__gen_gaussian_pyramid(mask)
+    @staticmethod
+    def __linear_blend_weights(frame):
+        height, width = frame.shape[:2]
 
-        blended_laplacian_pyramid = self.__blend_laplacian_pyramids(laplacian_pyramid_1,
-                                                                    laplacian_pyramid_2,
-                                                                    mask_pyramid)
+        rows = np.arange(height)
+        cols = np.arange(width)
+        rows_weights = np.minimum(rows, height - 1 - rows)
+        cols_weights = np.minimum(cols, width - 1 - cols)
 
-        blended_frame = self.__reconstruct_from_laplacian_pyramid(blended_laplacian_pyramid)
+        weights = np.minimum(rows_weights[:, np.newaxis], cols_weights)
+        max_weight = np.amax(weights)
 
-        return blended_frame
+        return weights / max_weight
+
+    @staticmethod
+    # Function to blend two frames
+    def __blend_frames(frame_1, frame_2):
+        mask1 = PanoramaGenerator.__get_valid_mask(frame_1)
+        mask2 = PanoramaGenerator.__get_valid_mask(frame_2)
+
+        weights1 = PanoramaGenerator.__linear_blend_weights(frame_1)
+        weights2 = PanoramaGenerator.__linear_blend_weights(frame_2)
+
+        # Repeat weights 3 times along the last axis to make them 3-channel matrices
+        weights1_3ch = np.repeat(weights1[:, :, np.newaxis], 3, axis=2)
+        weights2_3ch = np.repeat(weights2[:, :, np.newaxis], 3, axis=2)
+
+        mask = (mask1 * weights1_3ch + mask2 * weights2_3ch).astype(np.float32)
+
+        blended_frame = (frame_1 * mask1 * weights1_3ch + frame_2 * mask2 * weights2_3ch) / (mask + 1e-10)
+        blended_frame[mask == 0] = 0
+
+        return blended_frame.astype(np.uint8)
 
 
 if __name__ == '__main__':
