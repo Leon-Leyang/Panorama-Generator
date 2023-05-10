@@ -121,12 +121,18 @@ def display_frames_with_keypoints(frames, keypoints):
 # Class to generate a panorama from warped frames
 class PanoramaGenerator:
     @staticmethod
-    def gen_panorama(warped_frames, result_path):
+    def gen_panorama(warped_frames, num_levels, result_path):
         panorama = warped_frames[0]
         for i in range(1, len(warped_frames)):
-            panorama = PanoramaGenerator.__blend_frames(panorama, warped_frames[i])
+            panorama = PanoramaGenerator.__blend_frames_multiband(panorama, warped_frames[i], num_levels)
 
-        cv2.imwrite('./result/test4.jpg', panorama)
+        cv2.imwrite(result_path, panorama)
+
+    @staticmethod
+    def vis(panorama, name):
+        panorama_vis = cv2.resize(panorama, (int(panorama.shape[1] / 3), int(panorama.shape[0] / 3)))
+        cv2.imshow(name, panorama_vis)
+        cv2.waitKey(0)
 
     @staticmethod
     # Function to generate a Gaussian pyramid
@@ -188,44 +194,46 @@ class PanoramaGenerator:
         vld_mask = np.any(frame != 0, axis=-1)
 
         # Stack the mask three times to get a 3-channel mask
-        vld_mask = np.stack((vld_mask, vld_mask, vld_mask), axis=-1).astype(np.float32)
+        vld_mask = np.stack((vld_mask, vld_mask, vld_mask), axis=-1).astype(np.uint8)
         return vld_mask
 
-
     @staticmethod
-    def __linear_blend_weights(frame):
-        height, width = frame.shape[:2]
+    # Function to blend two frames using multiband blending
+    def __blend_frames_multiband(frame_1, frame_2, num_levels):
+        # Generate the mask of the valid regions of the two frames
+        vld_mask_1 = PanoramaGenerator.__get_valid_mask(frame_1)
 
-        rows = np.arange(height)
-        cols = np.arange(width)
-        rows_weights = np.minimum(rows, height - 1 - rows)
-        cols_weights = np.minimum(cols, width - 1 - cols)
+        # Print unique values in the mask
+        vld_mask_2 = PanoramaGenerator.__get_valid_mask(frame_2)
 
-        weights = np.minimum(rows_weights[:, np.newaxis], cols_weights)
-        max_weight = np.amax(weights)
+        # Get the combined mask of the two frames
+        combined_mask = vld_mask_1 + vld_mask_2
 
-        return weights / max_weight
+        # Apply Gaussian blur to the combined mask and normalize it
+        # mask = cv2.GaussianBlur(combined_mask, (5, 5), 2)
+        # mask = mask / 2
+        mask = combined_mask.astype(np.float32)
 
-    @staticmethod
-    # Function to blend two frames
-    def __blend_frames(frame_1, frame_2):
-        mask1 = PanoramaGenerator.__get_valid_mask(frame_1)
-        mask2 = PanoramaGenerator.__get_valid_mask(frame_2)
+        # Restore the value in the non-overlapping regions and invalid regions
+        mask[(vld_mask_1 == 1) & (combined_mask == 1)] = 0
+        mask[(vld_mask_2 == 1) & (combined_mask == 1)] = 1
+        mask[combined_mask == 2] = 0.5
+        # mask[combined_mask == 2] = 0
 
-        weights1 = PanoramaGenerator.__linear_blend_weights(frame_1)
-        weights2 = PanoramaGenerator.__linear_blend_weights(frame_2)
+        # Generate the Gaussian and Laplacian pyramids for the two frames
+        laplacian_pyramid_1 = PanoramaGenerator.__gen_laplacian_pyramid(frame_1, num_levels)
+        laplacian_pyramid_2 = PanoramaGenerator.__gen_laplacian_pyramid(frame_2, num_levels)
+        mask_pyramid = PanoramaGenerator.__gen_gaussian_pyramid(mask, num_levels)
 
-        # Repeat weights 3 times along the last axis to make them 3-channel matrices
-        weights1_3ch = np.repeat(weights1[:, :, np.newaxis], 3, axis=2)
-        weights2_3ch = np.repeat(weights2[:, :, np.newaxis], 3, axis=2)
+        # Blend the two laplacian pyramids
+        blended_laplacian_pyramid = PanoramaGenerator.__blend_laplacian_pyramids(laplacian_pyramid_1,
+                                                                                 laplacian_pyramid_2,
+                                                                                 mask_pyramid)
 
-        mask = (mask1 * weights1_3ch + mask2 * weights2_3ch).astype(np.float32)
+        # Reconstruct the blended frame from the blended laplacian pyramid
+        blended_frame = PanoramaGenerator.__reconstruct_from_laplacian_pyramid(blended_laplacian_pyramid)
 
-        blended_frame = (frame_1 * mask1 * weights1_3ch + frame_2 * mask2 * weights2_3ch) / (mask + 1e-10)
-        blended_frame[mask == 0] = 0
-
-        return blended_frame.astype(np.uint8)
-
+        return blended_frame
 
 if __name__ == '__main__':
     video_path = 'data/stable/lib_stable.mp4'
