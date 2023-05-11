@@ -146,7 +146,7 @@ def crop_black_border(image):
 
 
 if __name__ == '__main__':
-    video_path = 'data/stable/lib_stable.mp4'
+    video_path = '../data/stable/lib_stable.mp4'
     interval = 24
 
     frames = sample_frames(video_path, interval)
