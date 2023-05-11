@@ -1,20 +1,29 @@
 import time
-import os
+import argparse
 from panorama_generator import PanoramaGenerator
 from utils import *
 
 
+# Construct the argument parser
+ap = argparse.ArgumentParser()
+ap.add_argument('-v', '--video', required=True, help='path to the video')
+ap.add_argument('-i', '--interval', type=int, default=72, help='interval between sampled frames')
+ap.add_argument('-w', '--width', type=int, default=1920, help='width of the sampled frames')
+ap.add_argument('-h', '--height', type=int, default=1080, help='height of the sampled frames')
+ap.add_argument('-r', '--arg.ref_frame_idx', type=int, default=0, help='index of the reference frame')
+ap.add_argument('-l', '--num_levels', type=int, default=3, help='number of levels in the pyramid of multi-band blending'
+                )
+ap.add_argument('-c', '--crop', action='store_true', help='whether to crop the black borders')
+ap.add_argument('-o', '--output', default='output.jpg', help='path to the output panorama')
+
+# Parse the arguments
+arg = ap.parse_args()
+
 # Extract frames from the video
-video_path = 'data/stable/square_stable.mp4'
-interval = 72
-# width = 608
-# height = 1080
-width = 1920
-height = 1080
 print('Extracting frames from video...')
 s_time = time.time()
-frames = extract_frames(video_path, interval, width, height)
-print(f'Done! Extracted {len(frames)} frames. Take {time.time() - s_time:.2f}s.\n')
+frames = sample_frames(arg.video, arg.interval, arg.width, arg.height)
+print(f'Done! Sampled {len(frames)} frames. Take {time.time() - s_time:.2f}s.\n')
 
 # Extract SIFT features for the frames
 print('Extracting SIFT features...')
@@ -24,24 +33,23 @@ print(f'Done! Extracted keypoints and descriptors for {len(keypoints)} frames. T
 
 # Calculate the homographies between the reference frame and each frame
 print('Calculating homographies...')
-ref_frame_idx = -1
-if ref_frame_idx < 0:
-    ref_frame_idx = len(keypoints) + ref_frame_idx
+if arg.ref_frame_idx < 0:
+    arg.ref_frame_idx = len(keypoints) + arg.ref_frame_idx
 s_time = time.time()
-homographies = calc_homographies(keypoints, descriptors, ref_frame_idx)
+homographies = calc_homographies(keypoints, descriptors, arg.ref_frame_idx)
 print(f'Done! Calculated {len(homographies)} homographies. Take {time.time() - s_time:.2f}s.\n')
 
 # Warp all frames to the coordinate system of the first frame
 print('Warping frames...')
 s_time = time.time()
 warped_frames = warp_frames(frames, homographies)
-print(f'Done! Warped all frames to the coordinate system of frame {ref_frame_idx}. Take {time.time() - s_time:.2f}s.\n')
+print(f'Done! Warped all frames to the coordinate system of frame {arg.ref_frame_idx}. '
+      f'Take {time.time() - s_time:.2f}s.\n')
 
 # Generate panorama from the warped frames
 print('Generating panorama...')
-num_levels = 3
 s_time = time.time()
-panorama = PanoramaGenerator.gen_panorama(warped_frames, num_levels)
+panorama = PanoramaGenerator.gen_panorama(warped_frames, arg.num_levels)
 print(f'Done! Generated panorama. Take {time.time() - s_time:.2f}s.\n')
 
 # Crop the black borders of the panorama
@@ -52,6 +60,5 @@ print(f'Done! Cropped the panorama. Take {time.time() - s_time:.2f}s.\n')
 
 # Save the panorama
 print('Saving the panorama...')
-result_path = os.path.join('result', video_path.split('/')[-1].split('.')[0] + '.jpg')
-cv2.imwrite(result_path, panorama)
-print(f'Done! Saved the panorama in {result_path}.\n')
+cv2.imwrite(arg.output, panorama)
+print(f'Done! Saved the panorama in {arg.output}.\n')

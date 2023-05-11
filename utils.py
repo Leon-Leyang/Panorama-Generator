@@ -4,7 +4,7 @@ import numpy as np
 
 
 # Function to extract frames with a given interval from a video in the given path
-def extract_frames(video_path, interval, width=1920, height=1080):
+def sample_frames(video_path, interval, width=1920, height=1080):
     frames = []
     cap = cv2.VideoCapture(video_path)
     frame_count = 0
@@ -149,7 +149,7 @@ if __name__ == '__main__':
     video_path = 'data/stable/lib_stable.mp4'
     interval = 24
 
-    frames = extract_frames(video_path, interval)
+    frames = sample_frames(video_path, interval)
     print(len(frames))
 
     # Display the frames
