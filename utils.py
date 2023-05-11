@@ -155,6 +155,10 @@ class PanoramaGenerator:
             expanded_frame = cv2.resize(expanded_frame, (gaussian_pyramid[i].shape[1], gaussian_pyramid[i].shape[0]))
             laplacian_pyramid.append(gaussian_pyramid[i] - expanded_frame)
 
+        laplacian_pyramid.append(gaussian_pyramid[num_levels - 1])
+
+        laplacian_pyramid = [x.astype(np.float32) for x in laplacian_pyramid]
+
         return laplacian_pyramid
 
     @staticmethod
@@ -217,7 +221,7 @@ class PanoramaGenerator:
         # Restore the value in the non-overlapping regions and invalid regions
         mask[(vld_mask_1 == 1) & (combined_mask == 1)] = 0
         mask[(vld_mask_2 == 1) & (combined_mask == 1)] = 1
-        mask[combined_mask == 2] = 0.5
+        mask[combined_mask == 2] = 0
         # mask[combined_mask == 2] = 0
 
         # Generate the Gaussian and Laplacian pyramids for the two frames
