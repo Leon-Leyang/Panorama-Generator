@@ -126,13 +126,7 @@ class PanoramaGenerator:
         for i in range(1, len(warped_frames)):
             panorama = PanoramaGenerator.__blend_frames_multiband(panorama, warped_frames[i], num_levels)
 
-        cv2.imwrite(result_path.replace('garden_stable', 'garden_stable_feather'), panorama)
-
-    @staticmethod
-    def vis(panorama, name):
-        panorama_vis = cv2.resize(panorama, (int(panorama.shape[1]), int(panorama.shape[0])))
-        cv2.imshow(name, panorama_vis)
-        cv2.waitKey(0)
+        cv2.imwrite(result_path, panorama)
 
     @staticmethod
     # Function to generate a Gaussian pyramid
@@ -251,6 +245,7 @@ class PanoramaGenerator:
         blended_frame = PanoramaGenerator.__reconstruct_from_laplacian_pyramid(blended_laplacian_pyramid)
 
         return blended_frame
+
 
 if __name__ == '__main__':
     video_path = 'data/stable/lib_stable.mp4'
