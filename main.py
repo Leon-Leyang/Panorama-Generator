@@ -51,11 +51,12 @@ s_time = time.time()
 panorama = PanoramaGenerator.gen_panorama(warped_frames, arg.num_levels)
 print(f'Done! Generated panorama. Take {time.time() - s_time:.2f}s.\n')
 
-# Crop the black borders of the panorama
-print('Cropping the panorama...')
-s_time = time.time()
-panorama = crop_black_border(panorama)
-print(f'Done! Cropped the panorama. Take {time.time() - s_time:.2f}s.\n')
+# Crop the black borders of the panorama if needed
+if arg.crop:
+    print('Cropping the panorama...')
+    s_time = time.time()
+    panorama = crop_black_border(panorama)
+    print(f'Done! Cropped the panorama. Take {time.time() - s_time:.2f}s.\n')
 
 # Save the panorama
 print('Saving the panorama...')
