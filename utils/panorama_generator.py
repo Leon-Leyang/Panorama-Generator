@@ -5,7 +5,7 @@ import numpy as np
 # Class to generate a panorama from warped frames
 class PanoramaGenerator:
     @staticmethod
-    def gen_panorama(warped_frames, num_levels=3):
+    def gen_panorama(warped_frames, num_levels):
         panorama = warped_frames[0]
         for i in range(1, len(warped_frames)):
             panorama = PanoramaGenerator.__blend_frames_multi_band(panorama, warped_frames[i], num_levels)
