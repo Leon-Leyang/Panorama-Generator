@@ -5,7 +5,7 @@ from utils import *
 
 # Extract frames from the video
 video_path = 'data/stable/garden_stable.mp4'
-interval = 24
+interval = 72
 # width = 608
 # height = 1080
 width = 1920

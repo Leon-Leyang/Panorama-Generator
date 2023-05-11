@@ -128,6 +128,8 @@ class PanoramaGenerator:
 
         cv2.imwrite(result_path, panorama)
 
+        return panorama
+
     @staticmethod
     # Function to generate a Gaussian pyramid
     def __gen_gaussian_pyramid(frame, num_levels):
