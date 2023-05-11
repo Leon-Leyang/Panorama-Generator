@@ -225,18 +225,17 @@ class PanoramaGenerator:
 
         # Generate the Gaussian and Laplacian pyramids for the two frames
         laplacian_pyramid_1 = PanoramaGenerator.__gen_laplacian_pyramid(frame_1, num_levels)
-        display_frames([x/255 for x in laplacian_pyramid_1], 1)
-        # laplacian_pyramid_2 = PanoramaGenerator.__gen_laplacian_pyramid(frame_2, num_levels)
-        # mask_pyramid = PanoramaGenerator.__gen_gaussian_pyramid(mask, num_levels)
+        laplacian_pyramid_2 = PanoramaGenerator.__gen_laplacian_pyramid(frame_2, num_levels)
+        mask_pyramid = PanoramaGenerator.__gen_gaussian_pyramid(mask, num_levels)
 
         # Blend the two laplacian pyramids
-        # blended_laplacian_pyramid = PanoramaGenerator.__blend_laplacian_pyramids(laplacian_pyramid_1,
-        #                                                                          laplacian_pyramid_2,
-        #                                                                          mask_pyramid)
+        blended_laplacian_pyramid = PanoramaGenerator.__blend_laplacian_pyramids(laplacian_pyramid_1,
+                                                                                 laplacian_pyramid_2,
+                                                                                 mask_pyramid)
 
         # Reconstruct the blended frame from the blended laplacian pyramid
-        # blended_frame = PanoramaGenerator.__reconstruct_from_laplacian_pyramid(blended_laplacian_pyramid)
-        blended_frame = PanoramaGenerator.__reconstruct_from_laplacian_pyramid(laplacian_pyramid_1)
+        blended_frame = PanoramaGenerator.__reconstruct_from_laplacian_pyramid(blended_laplacian_pyramid)
+        # blended_frame = PanoramaGenerator.__reconstruct_from_laplacian_pyramid(laplacian_pyramid_1)
 
         return blended_frame
 
