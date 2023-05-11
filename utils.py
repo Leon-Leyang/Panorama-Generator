@@ -125,12 +125,12 @@ class PanoramaGenerator:
         panorama = warped_frames[0]
         for i in range(1, len(warped_frames)):
             panorama = PanoramaGenerator.__blend_frames_multiband(panorama, warped_frames[i], num_levels)
-
+            PanoramaGenerator.vis(panorama, 'panorama')
         cv2.imwrite(result_path, panorama)
 
     @staticmethod
     def vis(panorama, name):
-        panorama_vis = cv2.resize(panorama, (int(panorama.shape[1] / 3), int(panorama.shape[0] / 3)))
+        panorama_vis = cv2.resize(panorama, (int(panorama.shape[1]), int(panorama.shape[0])))
         cv2.imshow(name, panorama_vis)
         cv2.waitKey(0)
 
@@ -147,6 +147,7 @@ class PanoramaGenerator:
     @staticmethod
     # Function to generate a Laplacian pyramid
     def __gen_laplacian_pyramid(frame, num_levels):
+        frame = frame.astype(np.float32)
         gaussian_pyramid = PanoramaGenerator.__gen_gaussian_pyramid(frame, num_levels)
         laplacian_pyramid = []
         for i in range(num_levels - 1):
@@ -156,8 +157,6 @@ class PanoramaGenerator:
             laplacian_pyramid.append(gaussian_pyramid[i] - expanded_frame)
 
         laplacian_pyramid.append(gaussian_pyramid[num_levels - 1])
-
-        laplacian_pyramid = [x.astype(np.float32) for x in laplacian_pyramid]
 
         return laplacian_pyramid
 
@@ -180,7 +179,7 @@ class PanoramaGenerator:
             expanded_frame = cv2.resize(expanded_frame, (laplacian_pyramid[i].shape[1], laplacian_pyramid[i].shape[0]))
             frame = laplacian_pyramid[i] + expanded_frame
 
-        return frame
+        return frame.astype(np.uint8)
 
     @staticmethod
     # Function to generate a smooth mask of the same size as the frame
@@ -226,16 +225,18 @@ class PanoramaGenerator:
 
         # Generate the Gaussian and Laplacian pyramids for the two frames
         laplacian_pyramid_1 = PanoramaGenerator.__gen_laplacian_pyramid(frame_1, num_levels)
-        laplacian_pyramid_2 = PanoramaGenerator.__gen_laplacian_pyramid(frame_2, num_levels)
-        mask_pyramid = PanoramaGenerator.__gen_gaussian_pyramid(mask, num_levels)
+        display_frames([x/255 for x in laplacian_pyramid_1], 1)
+        # laplacian_pyramid_2 = PanoramaGenerator.__gen_laplacian_pyramid(frame_2, num_levels)
+        # mask_pyramid = PanoramaGenerator.__gen_gaussian_pyramid(mask, num_levels)
 
         # Blend the two laplacian pyramids
-        blended_laplacian_pyramid = PanoramaGenerator.__blend_laplacian_pyramids(laplacian_pyramid_1,
-                                                                                 laplacian_pyramid_2,
-                                                                                 mask_pyramid)
+        # blended_laplacian_pyramid = PanoramaGenerator.__blend_laplacian_pyramids(laplacian_pyramid_1,
+        #                                                                          laplacian_pyramid_2,
+        #                                                                          mask_pyramid)
 
         # Reconstruct the blended frame from the blended laplacian pyramid
-        blended_frame = PanoramaGenerator.__reconstruct_from_laplacian_pyramid(blended_laplacian_pyramid)
+        # blended_frame = PanoramaGenerator.__reconstruct_from_laplacian_pyramid(blended_laplacian_pyramid)
+        blended_frame = PanoramaGenerator.__reconstruct_from_laplacian_pyramid(laplacian_pyramid_1)
 
         return blended_frame
 
