@@ -43,55 +43,46 @@ def extract_sift_features(frames):
     return keypoints, descriptors
 
 
-# Function to calculate the homographies between consecutive frames
-def calc_adjacent_homographies(keypoints, descriptors):
-    homographies = []
-
-    # Create a BFMatcher object
+# Function to calculate the homographies between the reference frame and each frame
+def calc_homographies(keypoints, descriptors, ref_frame_idx):
+    homographies = [np.identity(3) if i == ref_frame_idx else None for i in range(len(keypoints))]
     bfm = cv2.BFMatcher()
 
-    for i in range(len(keypoints) - 1):
-        # Find the matches between the descriptors of the current frame and the next frame
-        matches = bfm.knnMatch(descriptors[i], descriptors[i + 1], k=2)
-
-        # Apply Lowe's ratio test to select good matches
-        # https://docs.opencv.org/3.4/d5/d6f/tutorial_feature_flann_matcher.html
+    for i in range(ref_frame_idx + 1, len(keypoints)):
+        matches = bfm.knnMatch(descriptors[i-1], descriptors[i], k=2)
         good_matches = []
         for m1, m2 in matches:
             if m1.distance < 0.75 * m2.distance:
                 good_matches.append(m1)
-
-        # Extract the coordinates of the matched keypoints
-        src_pts = [keypoints[i][m.queryIdx].pt for m in good_matches]
-        dst_pts = [keypoints[i + 1][m.trainIdx].pt for m in good_matches]
-
-        # Calculate the homography between the current frame and the next frame
+        src_pts = [keypoints[i-1][m.queryIdx].pt for m in good_matches]
+        dst_pts = [keypoints[i][m.trainIdx].pt for m in good_matches]
         h, _ = cv2.findHomography(np.array(src_pts), np.array(dst_pts), cv2.RANSAC)
-        homographies.append(h)
+        homographies[i] = homographies[i-1] @ h
+
+    for i in range(ref_frame_idx - 1, -1, -1):
+        matches = bfm.knnMatch(descriptors[i], descriptors[i+1], k=2)
+        good_matches = []
+        for m1, m2 in matches:
+            if m1.distance < 0.75 * m2.distance:
+                good_matches.append(m1)
+        src_pts = [keypoints[i][m.queryIdx].pt for m in good_matches]
+        dst_pts = [keypoints[i+1][m.trainIdx].pt for m in good_matches]
+        h, _ = cv2.findHomography(np.array(src_pts), np.array(dst_pts), cv2.RANSAC)
+        homographies[i] = homographies[i+1] @ np.linalg.inv(h)
+
+    return homographies
 
     return homographies
 
 
-# Function to cumulate the homographies
-def cumulate_homographies(homographies):
-    # Initialize the cumulative homographies
-    cumulative_homographies = [np.identity(3)]
-
-    # Cumulate the homographies iteratively
-    for h in homographies:
-        cumulative_homographies.append(cumulative_homographies[-1] @ h)
-
-    return cumulative_homographies
-
-
 # Function to warp all frames to the coordinate system of the first frame
-def warp_frames(frames, cumulative_homographies):
+def warp_frames(frames, homographies):
     warped_frames = []
 
     # Warp all frames iteratively
     for i in range(len(frames)):
         # Get the inverse of the cumulative homography
-        h_inv = np.linalg.inv(cumulative_homographies[i])
+        h_inv = np.linalg.inv(homographies[i])
 
         # Warp the current frame
         size = tuple(map(int, (frames[i].shape[1] * 3, frames[i].shape[0] * 1.5)))

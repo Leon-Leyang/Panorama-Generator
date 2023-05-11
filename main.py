@@ -4,7 +4,7 @@ from utils import *
 
 
 # Extract frames from the video
-video_path = 'data/stable/auditorium_stable.mp4'
+video_path = 'data/stable/square_stable.mp4'
 interval = 72
 # width = 608
 # height = 1080
@@ -21,23 +21,20 @@ s_time = time.time()
 keypoints, descriptors = extract_sift_features(frames)
 print(f'Done! Extracted keypoints and descriptors for {len(keypoints)} frames. Take {time.time() - s_time:.2f}s.\n')
 
-# Calculate the homographies between adjacent frames
-print('Calculating adjacent homographies...')
+# Calculate the homographies between the reference frame and each frame
+print('Calculating homographies...')
+ref_frame_idx = -1
+if ref_frame_idx < 0:
+    ref_frame_idx = len(keypoints) + ref_frame_idx
 s_time = time.time()
-adjacent_homographies = calc_adjacent_homographies(keypoints, descriptors)
-print(f'Done! Calculated {len(adjacent_homographies)} adjacent homographies. Take {time.time() - s_time:.2f}s.\n')
-
-# Cumulate the homographies
-print('Cumulating homographies...')
-s_time = time.time()
-cumulative_homographies = cumulate_homographies(adjacent_homographies)
-print(f'Done! Got {len(cumulative_homographies)} cumulated homographies. Take {time.time() - s_time:.2f}s.\n')
+homographies = calc_homographies(keypoints, descriptors, ref_frame_idx)
+print(f'Done! Calculated {len(homographies)} homographies. Take {time.time() - s_time:.2f}s.\n')
 
 # Warp all frames to the coordinate system of the first frame
 print('Warping frames...')
 s_time = time.time()
-warped_frames = warp_frames(frames, cumulative_homographies)
-print(f'Done! Warped all frames to the coordinate system of the first frame. Take {time.time() - s_time:.2f}s.\n')
+warped_frames = warp_frames(frames, homographies)
+print(f'Done! Warped all frames to the coordinate system of frame {ref_frame_idx}. Take {time.time() - s_time:.2f}s.\n')
 
 # Generate panorama from the warped frames
 print('Generating panorama...')
