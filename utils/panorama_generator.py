@@ -60,6 +60,20 @@ class PanoramaGenerator:
         return frame.astype(np.uint8)
 
     @staticmethod
+    # Function to generate direct mask of the same size as the frame
+    # The non-overlapping area of frame1 is set to 0 and the non-overlapping area of frame2 is set to 1
+    # The overlapping area is set to 0.5
+    def __gen_direct_mask(frame1, frame2):
+        # Generate a mask and initialize it to 0.5
+        # Then set the non-overlapping area of frame1 to 0 and the non-overlapping area of frame2 to 1
+        mask = np.zeros_like(frame1, dtype=np.float32)
+        mask[(frame1 > 0) & (frame2 == 0)] = 0
+        mask[(frame1 == 0) & (frame2 > 0)] = 1
+        mask[(frame1 > 0) & (frame2 > 0)] = 0.5
+
+        return mask
+
+    @staticmethod
     # Function to generate a smooth mask of the same size as the frame
     def __gen_smooth_mask(frame1, frame2):
         # Generate a mask and initialize it to 0
