@@ -12,6 +12,7 @@ ap.add_argument('-he', '--height', type=int, default=1080, help='height of the s
 ap.add_argument('-r', '--ref_frame_idx', type=int, default=0, help='index of the reference frame')
 ap.add_argument('-l', '--num_levels', type=int, default=3, help='number of levels in the pyramid of multi-band blending'
                 )
+ap.add_argument('-m', '--mask_type', type=str, default='feathered', help='type of the mask used in multi-band blending')
 ap.add_argument('-c', '--crop', action='store_true', help='whether to crop the black borders')
 ap.add_argument('-o', '--output', default='output.jpg', help='path to the output panorama')
 
@@ -19,7 +20,7 @@ ap.add_argument('-o', '--output', default='output.jpg', help='path to the output
 arg = ap.parse_args()
 
 # Extract frames from the video
-print('Extracting frames from video...')
+print('Sampling frames from video...')
 s_time = time.time()
 frames = sample_frames(arg.video, arg.interval, arg.width, arg.height)
 print(f'Done! Sampled {len(frames)} frames. Take {time.time() - s_time:.2f}s.\n')
@@ -48,7 +49,7 @@ print(f'Done! Warped all frames to the coordinate system of frame {arg.ref_frame
 # Generate panorama from the warped frames
 print('Generating panorama...')
 s_time = time.time()
-panorama = PanoramaGenerator.gen_panorama(warped_frames, arg.num_levels)
+panorama = PanoramaGenerator.gen_panorama(warped_frames, arg.num_levels, arg.mask_type)
 print(f'Done! Generated panorama. Take {time.time() - s_time:.2f}s.\n')
 
 # Crop the black borders of the panorama if needed

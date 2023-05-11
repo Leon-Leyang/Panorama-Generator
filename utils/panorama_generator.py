@@ -5,10 +5,10 @@ import numpy as np
 # Class to generate a panorama from warped frames
 class PanoramaGenerator:
     @staticmethod
-    def gen_panorama(warped_frames, num_levels):
+    def gen_panorama(warped_frames, num_levels, mask_type):
         panorama = warped_frames[0]
         for i in range(1, len(warped_frames)):
-            panorama = PanoramaGenerator.__blend_frames_multi_band(panorama, warped_frames[i], num_levels)
+            panorama = PanoramaGenerator.__blend_frames_multi_band(panorama, warped_frames[i], num_levels, mask_type)
 
         return panorama
 
@@ -60,6 +60,50 @@ class PanoramaGenerator:
         return frame.astype(np.uint8)
 
     @staticmethod
+    # Function to get the mask of the valid region of a frame
+    def __get_valid_mask(frame):
+        vld_mask = np.any(frame != 0, axis=-1)
+
+        # Stack the mask three times to get a 3-channel mask
+        vld_mask = np.stack((vld_mask, vld_mask, vld_mask), axis=-1).astype(np.uint8)
+        return vld_mask
+
+    @staticmethod
+    # Function to blend two frames using multi-band blending
+    def __blend_frames_multi_band(frame_1, frame_2, num_levels, mask_type):
+        mask = MaskFactory.gen_mask(frame_1, frame_2, mask_type)
+
+        # Generate the Gaussian and Laplacian pyramids for the two frames
+        laplacian_pyramid_1 = PanoramaGenerator.__gen_laplacian_pyramid(frame_1, num_levels)
+        laplacian_pyramid_2 = PanoramaGenerator.__gen_laplacian_pyramid(frame_2, num_levels)
+        mask_pyramid = PanoramaGenerator.__gen_gaussian_pyramid(mask, num_levels)
+
+        # Blend the two laplacian pyramids
+        blended_laplacian_pyramid = PanoramaGenerator.__blend_laplacian_pyramids(laplacian_pyramid_1,
+                                                                                 laplacian_pyramid_2,
+                                                                                 mask_pyramid)
+
+        # Reconstruct the blended frame from the blended laplacian pyramid
+        blended_frame = PanoramaGenerator.__reconstruct_from_laplacian_pyramid(blended_laplacian_pyramid)
+
+        return blended_frame
+
+
+# Class to generate the specific mask used for blending
+class MaskFactory:
+    @staticmethod
+    # Function to generate the specific mask used for blending based on the input mask type
+    def gen_mask(frame1, frame2, mask_type):
+        if mask_type == 'direct':
+            return MaskFactory.__gen_direct_mask(frame1, frame2)
+        elif mask_type == 'gaussian':
+            return MaskFactory.__gen_gaussian_mask(frame1, frame2)
+        elif mask_type == 'feathered':
+            return MaskFactory.__gen_feathered_mask(frame1, frame2)
+        else:
+            raise ValueError('Invalid mask type')
+
+    @staticmethod
     # Function to generate direct mask of the same size as the frame
     # The non-overlapping area of frame1 is set to 0 and the non-overlapping area of frame2 is set to 1
     # The overlapping area is set to 0.5
@@ -74,8 +118,8 @@ class PanoramaGenerator:
         return mask
 
     @staticmethod
-    # Function to generate a smooth mask of the same size as the frame
-    def __gen_smooth_mask(frame1, frame2):
+    # Function to generate a gaussian blurred mask of the same size as the frame
+    def __gen_gaussian_mask(frame1, frame2):
         # Generate a mask and initialize it to 0
         # Then set the non-overlapping area of frame1 to 0 and the non-overlapping area of frame2 to 1
         mask = np.zeros_like(frame1, dtype=np.float32)
@@ -114,32 +158,3 @@ class PanoramaGenerator:
                 mask[overlap_mask[:, col], col, :] = (col - min_col) / (max_col - min_col)
 
         return mask
-
-    @staticmethod
-    # Function to get the mask of the valid region of a frame
-    def __get_valid_mask(frame):
-        vld_mask = np.any(frame != 0, axis=-1)
-
-        # Stack the mask three times to get a 3-channel mask
-        vld_mask = np.stack((vld_mask, vld_mask, vld_mask), axis=-1).astype(np.uint8)
-        return vld_mask
-
-    @staticmethod
-    # Function to blend two frames using multi-band blending
-    def __blend_frames_multi_band(frame_1, frame_2, num_levels):
-        mask = PanoramaGenerator.__gen_feathered_mask(frame_1, frame_2)
-
-        # Generate the Gaussian and Laplacian pyramids for the two frames
-        laplacian_pyramid_1 = PanoramaGenerator.__gen_laplacian_pyramid(frame_1, num_levels)
-        laplacian_pyramid_2 = PanoramaGenerator.__gen_laplacian_pyramid(frame_2, num_levels)
-        mask_pyramid = PanoramaGenerator.__gen_gaussian_pyramid(mask, num_levels)
-
-        # Blend the two laplacian pyramids
-        blended_laplacian_pyramid = PanoramaGenerator.__blend_laplacian_pyramids(laplacian_pyramid_1,
-                                                                                 laplacian_pyramid_2,
-                                                                                 mask_pyramid)
-
-        # Reconstruct the blended frame from the blended laplacian pyramid
-        blended_frame = PanoramaGenerator.__reconstruct_from_laplacian_pyramid(blended_laplacian_pyramid)
-
-        return blended_frame
