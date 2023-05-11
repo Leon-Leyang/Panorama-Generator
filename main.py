@@ -4,7 +4,7 @@ from utils import *
 
 
 # Extract frames from the video
-video_path = 'data/stable/garden_stable.mp4'
+video_path = 'data/stable/auditorium_stable.mp4'
 interval = 72
 # width = 608
 # height = 1080
@@ -45,6 +45,12 @@ num_levels = 3
 s_time = time.time()
 panorama = PanoramaGenerator.gen_panorama(warped_frames, num_levels)
 print(f'Done! Generated panorama. Take {time.time() - s_time:.2f}s.\n')
+
+# Crop the black borders of the panorama
+print('Cropping the panorama...')
+s_time = time.time()
+panorama = crop_black_border(panorama)
+print(f'Done! Cropped the panorama. Take {time.time() - s_time:.2f}s.\n')
 
 # Save the panorama
 print('Saving the panorama...')

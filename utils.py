@@ -1,4 +1,5 @@
 import cv2
+import imutils
 import numpy as np
 
 
@@ -116,6 +117,41 @@ def display_frames_with_keypoints(frames, keypoints):
         frame = cv2.drawKeypoints(frame, kp, None)
         cv2.imshow('frame', frame)
         cv2.waitKey(0)
+
+
+# Function to crop the black borders of a panorama
+def crop_black_border(image):
+    image = cv2.copyMakeBorder(image, 10, 10, 10, 10, cv2.BORDER_CONSTANT, (0, 0, 0))
+
+    # Convert the image to grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # Threshold the image, setting all foreground pixels to 255 and all background pixels to 0
+    thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY)[1]
+
+    cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cnts = imutils.grab_contours(cnts)
+    c = max(cnts, key=cv2.contourArea)
+
+    mask = np.zeros(thresh.shape, dtype="uint8")
+    (x, y, w, h) = cv2.boundingRect(c)
+    cv2.rectangle(mask, (x, y), (x + w, y + h), 255, -1)
+
+    min_rect = mask.copy()
+    sub = mask.copy()
+
+    while cv2.countNonZero(sub) > 0:
+        min_rect = cv2.erode(min_rect, None)
+        sub = cv2.subtract(min_rect, thresh)
+
+    cnts = cv2.findContours(min_rect.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cnts = imutils.grab_contours(cnts)
+    c = max(cnts, key=cv2.contourArea)
+    (x, y, w, h) = cv2.boundingRect(c)
+
+    cropped_image = image[:y + h, x:x + w]
+
+    return cropped_image
 
 
 # Class to generate a panorama from warped frames
