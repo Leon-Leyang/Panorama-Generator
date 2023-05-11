@@ -42,7 +42,12 @@ print(f'Done! Warped all frames to the coordinate system of the first frame. Tak
 # Generate panorama from the warped frames
 print('Generating panorama...')
 num_levels = 3
-result_path = os.path.join('result', video_path.split('/')[-1].split('.')[0] + '.jpg')
 s_time = time.time()
-panorama = PanoramaGenerator.gen_panorama(warped_frames, num_levels, result_path)
-print(f'Done! Saved the panorama in {result_path}. Take {time.time() - s_time:.2f}s.\n')
+panorama = PanoramaGenerator.gen_panorama(warped_frames, num_levels)
+print(f'Done! Generated panorama. Take {time.time() - s_time:.2f}s.\n')
+
+# Save the panorama
+print('Saving the panorama...')
+result_path = os.path.join('result', video_path.split('/')[-1].split('.')[0] + '.jpg')
+cv2.imwrite(result_path, panorama)
+print(f'Done! Saved the panorama in {result_path}.\n')

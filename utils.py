@@ -121,12 +121,10 @@ def display_frames_with_keypoints(frames, keypoints):
 # Class to generate a panorama from warped frames
 class PanoramaGenerator:
     @staticmethod
-    def gen_panorama(warped_frames, num_levels, result_path):
+    def gen_panorama(warped_frames, num_levels=3):
         panorama = warped_frames[0]
         for i in range(1, len(warped_frames)):
             panorama = PanoramaGenerator.__blend_frames_multiband(panorama, warped_frames[i], num_levels)
-
-        cv2.imwrite(result_path, panorama)
 
         return panorama
 
