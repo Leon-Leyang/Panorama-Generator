@@ -1,5 +1,6 @@
 import time
 import os
+from panorama_generator import PanoramaGenerator
 from utils import *
 
 
