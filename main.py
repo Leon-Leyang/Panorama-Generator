@@ -49,5 +49,5 @@ print('Generating panorama...')
 num_levels = 3
 result_path = os.path.join('result', video_path.split('/')[-1].split('.')[0] + '.jpg')
 s_time = time.time()
-panorama = PanoramaGenerator.gen_panorama(warped_frames, num_levels, result_path.replace('.jpg', '.png'))
+panorama = PanoramaGenerator.gen_panorama(warped_frames, num_levels, result_path.replace('garden_stable', 'garden_stable_3'))
 print(f'Done! Saved the panorama in {result_path}. Take {time.time() - s_time:.2f}s.\n')

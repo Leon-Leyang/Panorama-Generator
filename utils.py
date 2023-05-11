@@ -126,7 +126,7 @@ class PanoramaGenerator:
         for i in range(1, len(warped_frames)):
             panorama = PanoramaGenerator.__blend_frames_multiband(panorama, warped_frames[i], num_levels)
 
-        cv2.imwrite(result_path, panorama)
+        cv2.imwrite(result_path.replace('garden_stable', 'garden_stable_feather'), panorama)
 
     @staticmethod
     def vis(panorama, name):
@@ -199,6 +199,30 @@ class PanoramaGenerator:
 
         return mask
 
+    # Function to generate a feathered mask of the same size as the frame
+    @staticmethod
+    def __gen_feathered_mask(frame1, frame2):
+        # Convert frames to grayscale
+        frame1_gray = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
+        frame2_gray = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
+
+        # Create a binary mask with non-overlapping areas set to 1 and 0
+        mask = np.zeros_like(frame1, dtype=np.float32)
+        mask[(frame1_gray > 0) & (frame2_gray == 0)] = 0
+        mask[(frame1_gray == 0) & (frame2_gray > 0)] = 1
+
+        # Create a linear gradient in the overlapping area
+        overlap_mask = np.logical_and(frame1_gray > 0, frame2_gray > 0)
+        rows, cols = np.where(overlap_mask)
+
+        if cols != []:
+            min_col, max_col = np.min(cols), np.max(cols)
+
+            for col in range(min_col, max_col + 1):
+                mask[overlap_mask[:, col], col, :] = (col - min_col) / (max_col - min_col)
+
+        return mask
+
     @staticmethod
     # Function to get the mask of the valid region of a frame
     def __get_valid_mask(frame):
@@ -211,23 +235,7 @@ class PanoramaGenerator:
     @staticmethod
     # Function to blend two frames using multiband blending
     def __blend_frames_multiband(frame_1, frame_2, num_levels):
-        # Generate the mask of the valid regions of the two frames
-        # vld_mask_1 = PanoramaGenerator.__get_valid_mask(frame_1)
-
-        # Print unique values in the mask
-        # vld_mask_2 = PanoramaGenerator.__get_valid_mask(frame_2)
-
-        # Get the combined mask of the two frames
-        # combined_mask = vld_mask_1 + vld_mask_2
-
-        # Apply Gaussian blur to the combined mask and normalize it
-        # mask = combined_mask.astype(np.float32)
-
-        # Restore the value in the non-overlapping regions and invalid regions
-        # mask[(vld_mask_1 == 1) & (combined_mask == 1)] = 0
-        # mask[(vld_mask_2 == 1) & (combined_mask == 1)] = 1
-        # mask[combined_mask == 2] = 0.5
-        mask = PanoramaGenerator.__gen_smooth_mask(frame_1, frame_2)
+        mask = PanoramaGenerator.__gen_feathered_mask(frame_1, frame_2)
 
         # Generate the Gaussian and Laplacian pyramids for the two frames
         laplacian_pyramid_1 = PanoramaGenerator.__gen_laplacian_pyramid(frame_1, num_levels)
