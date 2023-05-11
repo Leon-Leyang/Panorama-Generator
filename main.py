@@ -9,7 +9,7 @@ ap.add_argument('-v', '--video', required=True, help='path to the video')
 ap.add_argument('-i', '--interval', type=int, default=72, help='interval between sampled frames')
 ap.add_argument('-w', '--width', type=int, default=1920, help='width of the sampled frames')
 ap.add_argument('-he', '--height', type=int, default=1080, help='height of the sampled frames')
-ap.add_argument('-r', '--arg.ref_frame_idx', type=int, default=0, help='index of the reference frame')
+ap.add_argument('-r', '--ref_frame_idx', type=int, default=0, help='index of the reference frame')
 ap.add_argument('-l', '--num_levels', type=int, default=3, help='number of levels in the pyramid of multi-band blending'
                 )
 ap.add_argument('-c', '--crop', action='store_true', help='whether to crop the black borders')
