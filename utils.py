@@ -125,7 +125,7 @@ class PanoramaGenerator:
         panorama = warped_frames[0]
         for i in range(1, len(warped_frames)):
             panorama = PanoramaGenerator.__blend_frames_multiband(panorama, warped_frames[i], num_levels)
-            PanoramaGenerator.vis(panorama, 'panorama')
+
         cv2.imwrite(result_path, panorama)
 
     @staticmethod
@@ -220,8 +220,7 @@ class PanoramaGenerator:
         # Restore the value in the non-overlapping regions and invalid regions
         mask[(vld_mask_1 == 1) & (combined_mask == 1)] = 0
         mask[(vld_mask_2 == 1) & (combined_mask == 1)] = 1
-        mask[combined_mask == 2] = 0
-        # mask[combined_mask == 2] = 0
+        mask[combined_mask == 2] = 0.5
 
         # Generate the Gaussian and Laplacian pyramids for the two frames
         laplacian_pyramid_1 = PanoramaGenerator.__gen_laplacian_pyramid(frame_1, num_levels)
