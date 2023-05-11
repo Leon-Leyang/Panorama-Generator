@@ -183,11 +183,19 @@ class PanoramaGenerator:
 
     @staticmethod
     # Function to generate a smooth mask of the same size as the frame
-    def __gen_smooth_mask(frame, kernel_size=5):
-        mask = np.zeros_like(frame)
-        for i in range(frame.shape[1]):
-            mask[:, i, :] = i / (frame.shape[1] - 1)
-        mask = cv2.GaussianBlur(mask, (kernel_size, kernel_size), (kernel_size - 1) / 2)
+    def __gen_smooth_mask(frame1, frame2):
+        # Generate a mask and initialize it to 0
+        # Then set the non-overlapping area of frame1 to 0 and the non-overlapping area of frame2 to 1
+        mask = np.zeros_like(frame1, dtype=np.float32)
+        mask[(frame1 > 0) & (frame2 == 0)] = 0
+        mask[(frame1 == 0) & (frame2 > 0)] = 1
+
+        # Apply a Gaussian blur to the mask
+        ksize = 55
+        mask = cv2.GaussianBlur(mask, (ksize, ksize), 0)
+
+        # Normalize the mask to be in the range [0, 1]
+        mask = (mask - np.min(mask)) / (np.max(mask) - np.min(mask))
 
         return mask
 
@@ -204,23 +212,22 @@ class PanoramaGenerator:
     # Function to blend two frames using multiband blending
     def __blend_frames_multiband(frame_1, frame_2, num_levels):
         # Generate the mask of the valid regions of the two frames
-        vld_mask_1 = PanoramaGenerator.__get_valid_mask(frame_1)
+        # vld_mask_1 = PanoramaGenerator.__get_valid_mask(frame_1)
 
         # Print unique values in the mask
-        vld_mask_2 = PanoramaGenerator.__get_valid_mask(frame_2)
+        # vld_mask_2 = PanoramaGenerator.__get_valid_mask(frame_2)
 
         # Get the combined mask of the two frames
-        combined_mask = vld_mask_1 + vld_mask_2
+        # combined_mask = vld_mask_1 + vld_mask_2
 
         # Apply Gaussian blur to the combined mask and normalize it
-        # mask = cv2.GaussianBlur(combined_mask, (5, 5), 2)
-        # mask = mask / 2
-        mask = combined_mask.astype(np.float32)
+        # mask = combined_mask.astype(np.float32)
 
         # Restore the value in the non-overlapping regions and invalid regions
-        mask[(vld_mask_1 == 1) & (combined_mask == 1)] = 0
-        mask[(vld_mask_2 == 1) & (combined_mask == 1)] = 1
-        mask[combined_mask == 2] = 0.5
+        # mask[(vld_mask_1 == 1) & (combined_mask == 1)] = 0
+        # mask[(vld_mask_2 == 1) & (combined_mask == 1)] = 1
+        # mask[combined_mask == 2] = 0.5
+        mask = PanoramaGenerator.__gen_smooth_mask(frame_1, frame_2)
 
         # Generate the Gaussian and Laplacian pyramids for the two frames
         laplacian_pyramid_1 = PanoramaGenerator.__gen_laplacian_pyramid(frame_1, num_levels)
@@ -234,7 +241,6 @@ class PanoramaGenerator:
 
         # Reconstruct the blended frame from the blended laplacian pyramid
         blended_frame = PanoramaGenerator.__reconstruct_from_laplacian_pyramid(blended_laplacian_pyramid)
-        # blended_frame = PanoramaGenerator.__reconstruct_from_laplacian_pyramid(laplacian_pyramid_1)
 
         return blended_frame
 
