@@ -51,6 +51,9 @@ def calc_homographies(keypoints, descriptors, ref_frame_idx):
     for i in range(ref_frame_idx + 1, len(keypoints)):
         matches = bfm.knnMatch(descriptors[i-1], descriptors[i], k=2)
         good_matches = []
+
+        # Filter the matches using the ratio test
+        # https://docs.opencv.org/3.4/d5/d6f/tutorial_feature_flann_matcher.html
         for m1, m2 in matches:
             if m1.distance < 0.75 * m2.distance:
                 good_matches.append(m1)
